@@ -1,0 +1,32 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      # Set up SSH to communicate with the production server
+      - name: Add private key to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" >> ~/.ssh/id_rsa  # Uses the secret
+          chmod 600 ~/.ssh/id_rsa  # Secure the key
+          ssh-keyscan -H your-production-server >> ~/.ssh/known_hosts  # Add server to known_hosts for SSH
+      
+      # Example deploy step (replace with your actual deployment logic)
+      - name: Deploy to production
+        run: |
+          ssh -o StrictHostKeyChecking=no user@192.168.56.82 "
+            docker pull your-registry-url/my-app:latest &&
+            docker stop my-app || true &&
+            docker rm my-app || true &&
+            docker run -d --name my-app your-registry-url/my-app:latest
+          "
+
