@@ -47,7 +47,8 @@ docker-compose up --build
 
 Перейдите по адресу:
 ```plaintext
-http://localhost
+http://localhost:5000
+http://localhost:8080
 ```
 
 Вы увидите сообщение: `Hello, World!`.
