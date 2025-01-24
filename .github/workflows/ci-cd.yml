@@ -1,9 +1,9 @@
-name: CI/CD Pipeline
+ame: CI/CD Pipeline
 
 on:
   push:
     branches:
-      - main  # Запуск пайплайна при пуше в основную ветку
+      - main
 
 jobs:
   build:
@@ -11,25 +11,28 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3  # Проверка кода из репозитория
+      uses: actions/checkout@v3
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2  # Настройка Docker Buildx для мульти-платформенных сборок
+      uses: docker/setup-buildx-action@v2
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
 
     - name: Build Docker image
       run: |
-        docker build -t my-app .  # Создание Docker-образа с тегом "my-app"
-        docker tag my-app my-dockerhub-username/my-app:latest  # Тегирование образа для Docker Hub
-        docker push my-dockerhub-username/my-app:latest  # Публикация образа в Docker Hub (если публичный)
+        docker build -t my-app .
+        docker tag my-app my-dockerhub-azat279/my-app:latest
+        docker push my-dockerhub-azat279/my-app:latest
 
     - name: Deploy to server via SSH
       run: |
-        ssh -o StrictHostKeyChecking=no -i ${{ secrets.SSH_PRIVATE_KEY }} user@your-server-ip "
-          docker pull my-dockerhub-username/my-app:latest &&  # Загрузка образа с Docker Hub
-          docker stop my-app || true &&  # Остановка текущего контейнера (если работает)
-          docker rm my-app || true &&  # Удаление контейнера
-          docker run -d --name my-app my-dockerhub-username/my-app:latest  # Запуск нового контейнера с образом
+        ssh -o StrictHostKeyChecking=no -i ${{ secrets.SSH_PRIVATE_KEY }} user@192.168.56.82 "
+          docker ps -q -f name=my-app | grep -q . && docker stop my-app && docker rm my-app || true
+          docker pull my-dockerhub-azat279/my-app:latest &&
+          docker run -d --name my-app my-dockerhub-azat279/my-app:latest
         "
-      env:
-        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}  # Использование приватного ключа для подключения
 
