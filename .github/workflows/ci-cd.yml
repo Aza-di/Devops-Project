@@ -2,31 +2,34 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    branches:
+      - main  # Запуск пайплайна при пуше в основную ветку
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v3
-      
-      # Set up SSH to communicate with the production server
-      - name: Add private key to known_hosts
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" >> ~/.ssh/id_rsa  # Uses the secret
-          chmod 600 ~/.ssh/id_rsa  # Secure the key
-          ssh-keyscan -H your-production-server >> ~/.ssh/known_hosts  # Add server to known_hosts for SSH
-      
-      # Example deploy step (replace with your actual deployment logic)
-      - name: Deploy to production
-        run: |
-          ssh -o StrictHostKeyChecking=no user@192.168.56.82 "
-            docker pull your-registry-url/my-app:latest &&
-            docker stop my-app || true &&
-            docker rm my-app || true &&
-            docker run -d --name my-app your-registry-url/my-app:latest
-          "
+    - name: Checkout code
+      uses: actions/checkout@v3  # Проверка кода из репозитория
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2  # Настройка Docker Buildx для мульти-платформенных сборок
+
+    - name: Build Docker image
+      run: |
+        docker build -t my-app .  # Создание Docker-образа с тегом "my-app"
+        docker tag my-app my-dockerhub-username/my-app:latest  # Тегирование образа для Docker Hub
+        docker push my-dockerhub-username/my-app:latest  # Публикация образа в Docker Hub (если публичный)
+
+    - name: Deploy to server via SSH
+      run: |
+        ssh -o StrictHostKeyChecking=no -i ${{ secrets.SSH_PRIVATE_KEY }} user@your-server-ip "
+          docker pull my-dockerhub-username/my-app:latest &&  # Загрузка образа с Docker Hub
+          docker stop my-app || true &&  # Остановка текущего контейнера (если работает)
+          docker rm my-app || true &&  # Удаление контейнера
+          docker run -d --name my-app my-dockerhub-username/my-app:latest  # Запуск нового контейнера с образом
+        "
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}  # Использование приватного ключа для подключения
 
