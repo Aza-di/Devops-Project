@@ -44,3 +44,14 @@ jobs:
       run: |
         docker push ${{ secrets.DOCKER_USERNAME }}/webapp:latest
 
+    - name: Deploy to Vagrant VM
+      run: |
+        ssh -o StrictHostKeyChecking=no vagrant@192.168.56.82 << 'EOF'
+          cd /webapp  # Убедитесь, что путь правильный
+          docker-compose down
+          docker-compose up -d
+          curl -I http://localhost || echo "Nginx failed to start"
+        EOF
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+
